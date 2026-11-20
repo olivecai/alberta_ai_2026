@@ -156,7 +156,6 @@ def write_annual_csv(
             row.extend(round(shares[label][index], 2) for label in BINS)
             writer.writerow(row)
 
-
 def plot_annual_employment(
     years: list[int],
     by_year_bin: dict[str, list[float]],
@@ -169,18 +168,19 @@ def plot_annual_employment(
     }
 
     for label, values in by_year_bin.items():
-        ax.plot(years, values, marker="o", linewidth=2.4, label=label, color=colors[label])
+        ax.plot(years, values, marker="o", linewidth=3.0, label=label, color=colors[label])
 
-    ax.set_title("Alberta Employment by Exposure/Complementarity Bin")
-    ax.set_xlabel("Year")
-    ax.set_ylabel("Annual average employment (thousands)")
+    ax.set_title("Alberta Employment by Exposure/Complementarity Bin", fontsize=20, pad=12)
+    ax.set_xlabel("Year", fontsize=18, labelpad=8)
+    ax.set_ylabel("Annual average employment (thousands)", fontsize=18, labelpad=8)
     ax.set_xticks(years)
+    ax.tick_params(axis="both", labelsize=12)
     ax.grid(True, axis="y", linestyle="--", alpha=0.35)
-    ax.legend(loc="best")
+    ax.legend(loc="upper left", fontsize=15)
+
     fig.tight_layout()
     fig.savefig(OUTPUT_DIR / "employment_exposure_complementarity_annual.png", dpi=200)
     plt.close(fig)
-
 
 def plot_employment_shares(
     years: list[int],
@@ -192,16 +192,23 @@ def plot_employment_shares(
         "High exposure, high complementarity": "#4C72B0",
         "Low exposure": "#55A868",
     }
-
     for label, values in shares.items():
-        ax.plot(years, values, marker="o", linewidth=2.4, label=label, color=colors[label])
-
-    ax.set_title("Employment Share of Alberta Total by Bin")
-    ax.set_xlabel("Year")
-    ax.set_ylabel("Share of total employment (%)")
+        ax.plot(years, values, marker="o", linewidth=3.0, label=label, color=colors[label])
+        
+    ax.set_title("Employment Share of Alberta Total by Bin", fontsize=20, pad=12)
+    ax.set_xlabel("Year", fontsize=18, labelpad=8)
+    ax.set_ylabel("Share of total employment (%)", fontsize=18, labelpad=8)
+    
     ax.set_xticks(years)
+    ax.tick_params(axis="both", labelsize=12)
+    
     ax.grid(True, axis="y", linestyle="--", alpha=0.35)
-    ax.legend(loc="best")
+    ax.legend(loc="upper left", fontsize=15)
+
+
+    ymin, ymax = ax.get_ylim()
+    ax.set_ylim(ymin, ymax + (ymax - ymin) * 0.25)
+    
     fig.tight_layout()
     fig.savefig(OUTPUT_DIR / "employment_share_exposure_complementarity_annual.png", dpi=200)
     plt.close(fig)
