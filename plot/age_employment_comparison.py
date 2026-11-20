@@ -20,9 +20,9 @@ DATASET_DIR = ROOT / "datasets"
 OUTPUT_DIR = ROOT / "plot"
 
 DATASETS = {
-    "15–24": DATASET_DIR / "employment_alberta_oct2020_oct2026_15_24.csv",
-    "24–54": DATASET_DIR / "employment_alberta_oct2020_oct2026_24_54.csv",
-    "55+": DATASET_DIR / "employment_alberta_oct2020_oct2026_55_over.csv",
+    "15–24": DATASET_DIR / "employment_oct2026_15_24.csv",
+    "24–54": DATASET_DIR / "employment_oct2026_25_54.csv",
+    "55+": DATASET_DIR / "employment_oct2026_55_over.csv",
 }
 
 

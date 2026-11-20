@@ -17,10 +17,14 @@ import matplotlib.pyplot as plt
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CSV_PATH = ROOT / "datasets" / "employment_alberta_oct2020_oct2026.csv"
+CSV_PATH = ROOT / "datasets" / "employment_2018_2026.csv"
 OUTPUT_DIR = ROOT / "plot"
 
 BINS = {
+    # all the categories:
+    # "Total" : {
+    #     "total, all industries",
+    # },
     "High exposure, low complementarity": {
         "professional, scientific and technical services",
         "finance and insurance",
@@ -169,6 +173,7 @@ def plot_annual_employment(
         "High exposure, low complementarity": "#C44E52",
         "High exposure, high complementarity": "#4C72B0",
         "Low exposure": "#55A868",
+        # "Total": "#8172B2",
     }
 
     for label, values in by_year_bin.items():
@@ -195,6 +200,7 @@ def plot_annual_shares(
         "High exposure, low complementarity": "#C44E52",
         "High exposure, high complementarity": "#4C72B0",
         "Low exposure": "#55A868",
+        # "Total": "#8172B2",
     }
 
     for label, values in shares.items():
