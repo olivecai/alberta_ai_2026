@@ -2,13 +2,12 @@
 Nov 20 2026 - Olivia Cai
 
 Bin Alberta employment industries by AI exposure/complementarity and plot
-annual average employment and annual employment shares.
+monthly average employment and monthly employment shares.
 '''
 
 from __future__ import annotations
 
 import csv
-from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 
@@ -79,10 +78,10 @@ def load_employment(path: Path) -> tuple[list[datetime], dict[str, list[float | 
     return months, employment
 
 
-def annual_average_by_bin(
+def monthly_by_bin(
     months: list[datetime],
     employment: dict[str, list[float | None]],
-) -> tuple[list[int], dict[str, list[float]], list[float], dict[str, list[float]]]:
+) -> tuple[dict[str, list[float]], list[float], dict[str, list[float]]]:
     normalized_bins = {
         label: {normalize_name(name) for name in category}
         for label, category in BINS.items()
@@ -97,96 +96,87 @@ def annual_average_by_bin(
     if missing:
         raise RuntimeError(f"Missing requested industries in CSV: {sorted(missing)}")
 
-    years = sorted({month.year for month in months})
-    by_year_bin: dict[str, list[float]] = {label: [] for label in BINS}
+    by_month_bin: dict[str, list[float]] = {label: [] for label in BINS}
     total_employment: list[float] = []
 
-    for year in years:
-        month_indexes = [index for index, month in enumerate(months) if month.year == year]
+    total_row = next(
+        values for name, values in employment.items()
+        if name.startswith("total, all industries")
+    )
 
+    for index in range(len(months)):
         for label, industries in normalized_bins.items():
-            monthly_totals = []
-            for index in month_indexes:
-                values = [employment[industry][index] for industry in industries]
-                available = [value for value in values if value is not None]
-                if len(available) == len(values):
-                    monthly_totals.append(sum(available))
-
-            by_year_bin[label].append(
-                sum(monthly_totals) / len(monthly_totals) if monthly_totals else 0.0
+            values = [employment[industry][index] for industry in industries]
+            available = [value for value in values if value is not None]
+            by_month_bin[label].append(
+                sum(available) if len(available) == len(values) else 0.0
             )
 
-        total_values = [
-            next(values[index] for name, values in employment.items() if name.startswith("total, all industries"))
-            for index in month_indexes
-        ]
-        available_totals = [value for value in total_values if value is not None]
-        total_employment.append(
-            sum(available_totals) / len(available_totals) if available_totals else 0.0
-        )
+        total = total_row[index]
+        total_employment.append(total if total is not None else 0.0)
 
     shares = {
         label: [
             (employment_value / total) * 100 if total else 0.0
             for employment_value, total in zip(employment_values, total_employment)
         ]
-        for label, employment_values in by_year_bin.items()
+        for label, employment_values in by_month_bin.items()
     }
 
-    return years, by_year_bin, total_employment, shares
+    return by_month_bin, total_employment, shares
 
 
-def write_annual_csv(
+def write_monthly_csv(
     path: Path,
-    years: list[int],
-    by_year_bin: dict[str, list[float]],
+    months: list[datetime],
+    by_month_bin: dict[str, list[float]],
     total_employment: list[float],
     shares: dict[str, list[float]],
 ) -> None:
     with path.open("w", encoding="utf-8", newline="") as file:
         writer = csv.writer(file)
-        header = ["Year", "Total employment (thousands)"]
+        header = ["Month", "Total employment (thousands)"]
         header.extend(f"{label} (thousands)" for label in BINS)
         header.extend(f"{label} share (%)" for label in BINS)
         writer.writerow(header)
 
-        for index, year in enumerate(years):
-            row = [year, round(total_employment[index], 1)]
-            row.extend(round(by_year_bin[label][index], 1) for label in BINS)
+        for index, month in enumerate(months):
+            row = [month.strftime("%Y-%m"), round(total_employment[index], 1)]
+            row.extend(round(by_month_bin[label][index], 1) for label in BINS)
             row.extend(round(shares[label][index], 2) for label in BINS)
             writer.writerow(row)
 
 
-def plot_annual_employment(
-    years: list[int],
-    by_year_bin: dict[str, list[float]],
+def plot_monthly_employment(
+    months: list[datetime],
+    by_month_bin: dict[str, list[float]],
 ) -> None:
-    fig, ax = plt.subplots(figsize=(11, 6.5))
+    fig, ax = plt.subplots(figsize=(13, 6.5))
     colors = {
         "High exposure, low complementarity": "#C44E52",
         "High exposure, high complementarity": "#4C72B0",
         "Low exposure": "#55A868",
     }
 
-    for label, values in by_year_bin.items():
-        ax.plot(years, values, marker="o", linewidth=2.4, label=label, color=colors[label])
+    for label, values in by_month_bin.items():
+        ax.plot(months, values, linewidth=1.8, marker=".", markersize=3, label=label, color=colors[label])
 
-    ax.set_title("Alberta Employment by Exposure/Complementarity Bin")
-    ax.set_xlabel("Year")
-    ax.set_ylabel("Annual average employment (thousands)")
-    ax.set_xticks(years)
-    ax.grid(True, axis="y", linestyle="--", alpha=0.35)
+    ax.set_title("Alberta Monthly Employment by Exposure/Complementarity Bin")
+    ax.set_xlabel("Month")
+    ax.set_ylabel("Employment (thousands)")
+    ax.grid(True, axis="both", linestyle="--", alpha=0.35)
     ax.legend(loc="best")
+    fig.autofmt_xdate(rotation=45)
     fig.tight_layout()
-    fig.savefig(OUTPUT_DIR / "employment_exposure_complementarity_annual.png", dpi=200)
+    fig.savefig(OUTPUT_DIR / "employment_exposure_complementarity_monthly.png", dpi=200)
     plt.close(fig)
 
 
-def plot_employment_shares(
-    years: list[int],
+def plot_monthly_shares(
+    months: list[datetime],
     shares: dict[str, list[float]],
 ) -> None:
-    fig, ax = plt.subplots(figsize=(11, 6.5))
+    fig, ax = plt.subplots(figsize=(13, 6.5))
     colors = {
         "High exposure, low complementarity": "#C44E52",
         "High exposure, high complementarity": "#4C72B0",
@@ -194,42 +184,42 @@ def plot_employment_shares(
     }
 
     for label, values in shares.items():
-        ax.plot(years, values, marker="o", linewidth=2.4, label=label, color=colors[label])
+        ax.plot(months, values, linewidth=1.8, marker=".", markersize=3, label=label, color=colors[label])
 
-    ax.set_title("Employment Share of Alberta Total by Bin")
-    ax.set_xlabel("Year")
+    ax.set_title("Monthly Employment Share of Alberta Total by Bin")
+    ax.set_xlabel("Month")
     ax.set_ylabel("Share of total employment (%)")
-    ax.set_xticks(years)
-    ax.grid(True, axis="y", linestyle="--", alpha=0.35)
+    ax.grid(True, axis="both", linestyle="--", alpha=0.35)
     ax.legend(loc="best")
+    fig.autofmt_xdate(rotation=45)
     fig.tight_layout()
-    fig.savefig(OUTPUT_DIR / "employment_share_exposure_complementarity_annual.png", dpi=200)
+    fig.savefig(OUTPUT_DIR / "employment_share_exposure_complementarity_monthly.png", dpi=200)
     plt.close(fig)
 
 
 def main() -> None:
     months, employment = load_employment(CSV_PATH)
-    years, by_year_bin, total_employment, shares = annual_average_by_bin(months, employment)
+    by_month_bin, total_employment, shares = monthly_by_bin(months, employment)
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    write_annual_csv(
-        OUTPUT_DIR / "employment_exposure_complementarity_annual.csv",
-        years,
-        by_year_bin,
+    write_monthly_csv(
+        OUTPUT_DIR / "employment_exposure_complementarity_monthly.csv",
+        months,
+        by_month_bin,
         total_employment,
         shares,
     )
-    plot_annual_employment(years, by_year_bin)
-    plot_employment_shares(years, shares)
+    plot_monthly_employment(months, by_month_bin)
+    plot_monthly_shares(months, shares)
 
-    print("Annual average employment (thousands) and share of Alberta total:")
-    print("Year | Total | " + " | ".join(BINS))
-    for index, year in enumerate(years):
+    print("Monthly employment (thousands) and share of Alberta total:")
+    print("Month | Total | " + " | ".join(BINS))
+    for index, month in enumerate(months):
         bin_text = " | ".join(
-            f"{by_year_bin[label][index]:.1f} ({shares[label][index]:.2f}%)"
+            f"{by_month_bin[label][index]:.1f} ({shares[label][index]:.2f}%)"
             for label in BINS
         )
-        print(f"{year} | {total_employment[index]:.1f} | {bin_text}")
+        print(f"{month.strftime('%Y-%m')} | {total_employment[index]:.1f} | {bin_text}")
 
 
 if __name__ == "__main__":
